@@ -1,0 +1,25 @@
+{
+  "name": "promonce",
+  "version": "0.0.1",
+  "description": "Promisification of EventEmitter.once",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "3y3",
+  "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/3y3/promonce.git"
+  },
+  "keywords": [
+    "event",
+    "promise",
+    "once",
+    "async"
+  ],
+  "bugs": {
+    "url": "https://github.com/3y3/promonce/issues"
+  },
+  "homepage": "https://github.com/3y3/promonce#readme"
+}
