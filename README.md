@@ -1,16 +1,14 @@
 # Promonce
-Promise based event wrapper
+Promisification of EventEmitter.once
 
-###Disclaimer
-> I should bern in the hell for this module!
 
 ##API
 ```js
 on(target, event, [error])
 ```
-**target** - EventEmitter based object.
-**event** - A name of event which you want to listen on.
-**error** - A name of error event. `on` will be rejected when this event fired.
+- **target** - EventEmitter based object.
+- **event** - A name of event which you want to listen on.
+- **error** - A name of error event. `on` will be rejected when this event fired.
 
 
 ##Usage
