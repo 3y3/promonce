@@ -21,5 +21,8 @@
   "bugs": {
     "url": "https://github.com/3y3/promonce/issues"
   },
-  "homepage": "https://github.com/3y3/promonce#readme"
+  "homepage": "https://github.com/3y3/promonce#readme",
+  "scripts": {
+    "test": "mocha"
+  }
 }

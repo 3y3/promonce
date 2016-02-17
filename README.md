@@ -13,6 +13,7 @@ on(target, event, [error])
 
 ##Usage
 ###ES6 example
+- simple `once` alternative
 ```js
 const on = require('promonce');
 const net = require('net');
@@ -20,8 +21,7 @@ const net = require('net');
 const connection = net.createConnection(5858);
 on(connection, 'connect').then(console.log);
 ```
-
-###ES6 example with coroutines
+- debounced `on` alternative
 ```js
 const co = require('co');
 const on = require('promonce');
@@ -32,6 +32,8 @@ function yandex() {
     const response = yield on(get('ya.ru'), 'response', 'error');
     const data = '';
 
+    // there an event is debounced
+    // you will not listen on new one while processing current
     while (yield on(response, 'readable')) {
       const chunk = response.read();
       if (chunk) data += chunk;
@@ -40,6 +42,30 @@ function yandex() {
 
     return data;
   })
+}
+```
+- custom `on` event
+```js
+const co = require('co');
+const on = require('promonce');
+const get = require('net').get;
+
+function yandex() {
+  return co(function * () {
+    const response = yield on(get('ya.ru'), 'response', 'error');
+    const queue = on.queue();
+    const data = '';
+
+    // there an event is debounced
+    // you will not listen on new one while processing current
+    while (yield queue(response, 'readable')) {
+      const chunk = response.read();
+      if (chunk) data += chunk;
+      else break queue.clean();
+    }
+
+    return data;
+  });
 }
 ```
 
