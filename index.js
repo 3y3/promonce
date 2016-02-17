@@ -9,25 +9,36 @@ function get(container, target, event) {
 function set(container, target, event, queue) {
   const store = container.get(target) || {};
 
-  if (typeof event == 'object') store = event;
-  else store[event] = queue || [];
+  store[event] = queue || [];
 
   container.set(target, store);
+}
+
+function PAIR(container, target) {
+  const store = container.get(target) || new Map();
+  container.set(store);
+  return function (event, error) {
+    const EVENT = store.get(event) || new Map();
+    store.set(EVENT);
+
+    const ERROR = EVENT.get(error) || [event, error];
+    EVENT.set(ERROR);
+    return ERROR;
+  }
 }
 
 function instantiate(queuing) {
   queuing = queuing || false;
 
-  const onces = new Map();
-  const thrownes = new Map();
+  const pairs = new Map();
+  const queues = new Map();
   const callbacks = new WeakMap();
 
   const call = Function.call.call.bind(Function.call);
   const clean = promise => (call(callbacks.get(promise)), promise);
 
   const on = Function.bind.apply(function(target, event, error) {
-    const container = error == null ? onces : thrownes;
-
+    const pair = PAIR(pairs, target)(event, error);
     const once = Function.call.bind(on.once, target);
     const off = Function.call.bind(on.off, target);
 
@@ -48,12 +59,12 @@ function instantiate(queuing) {
       return promise;
     };
 
-    const queue = get(container, target, event);
-    const pick = event => clean(queue.shift());
-    const keep = event => (queuing && queue.push(promise()));
+    const queue = get(queues, target, pair);
+    const pick = $ => clean(queue.shift());
+    const keep = $ => queuing && queue.push(promise());
 
     if (queue.length) return pick(event);
-    set(container, target, event, queue);
+    set(queues, target, pair, queue);
 
     return promise();
   }, arguments);
