@@ -1,28 +1,22 @@
 'use strict';
 
-function get(container, target, event) {
-  const store = container.get(target) || {};
-  if (event == null) return store;
-  return store[event] || [];
+function STORE(container, target, fallback) {
+  const store = container.get(target) || fallback || new Map();
+  container.set(target, store);
+  return store;
 }
 
-function set(container, target, event, queue) {
-  const store = container.get(target) || {};
-
-  store[event] = queue || [];
-
-  container.set(target, store);
+function QUEUE(container, target, pair) {
+  const store = STORE(container, target);
+  const queue = STORE(store, pair, []);
+  return queue;
 }
 
 function PAIR(container, target) {
-  const store = container.get(target) || new Map();
-  container.set(store);
+  const store = STORE(container, target);
   return function (event, error) {
-    const EVENT = store.get(event) || new Map();
-    store.set(EVENT);
-
-    const ERROR = EVENT.get(error) || [event, error];
-    EVENT.set(ERROR);
+    const EVENT = STORE(store, event);
+    const ERROR = STORE(EVENT, error, [event, error]);
     return ERROR;
   }
 }
@@ -32,41 +26,47 @@ function instantiate(queuing) {
 
   const pairs = new Map();
   const queues = new Map();
-  const callbacks = new WeakMap();
+  const cleanups = new WeakMap();
+  const cleanup = promise => cleanups.get(promise);
 
   const call = Function.call.call.bind(Function.call);
-  const clean = promise => (call(callbacks.get(promise)), promise);
+  const clean = promise => (promise && cleanup(promise).map(call), promise);
 
   const on = Function.bind.apply(function(target, event, error) {
     const pair = PAIR(pairs, target)(event, error);
     const once = Function.call.bind(on.once, target);
     const off = Function.call.bind(on.off, target);
 
-    const promise = () => {
-      const cleans = [];
-      const clean = $ => cleans.map(call);
+    const next = $ => {
+      const clean = $ => actions.map(call);
+      const actions = [];
       const promise = new Promise((resolve, reject) => {
-        once(event, $ => (keep(event), clean(), resolve($)));
-        cleans.push($ => off(event, resolve));
+        const onevent = $ => (keep(event), clean(), resolve($));
+        once(event, onevent);
+        actions.push($ => off(event, onevent));
 
         if (error == null) return;
 
-        once(error, $ => (keep(event), clean(), reject($)));
-        cleans.push($ => off(error, reject));
+        const onerror = $ => (keep(error), clean(), reject($));
+        once(error, onerror);
+        actions.push($ => off(error, onerror));
       });
-
-      callbacks.set(promise, clean);
+      cleanups.set(promise, actions);
       return promise;
     };
 
-    const queue = get(queues, target, pair);
     const pick = $ => clean(queue.shift());
-    const keep = $ => queuing && queue.push(promise());
+    const keep = $ => queuing && queue.push(next());
 
-    if (queue.length) return pick(event);
-    set(queues, target, pair, queue);
+    const queue = QUEUE(queues, target, pair);
+    if (queue.length) return queuing ? pick() : queue[0];
+    if (queuing) return next();
 
-    return promise();
+    const promise = next();
+    queue.push(promise);
+
+    cleanup(promise).push(pick);
+    return promise;
   }, arguments);
 
   on.clean = function() {
